@@ -8,9 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
-using Newtonsoft.Json;
 using System.Drawing.Text;
 using System.Drawing.Drawing2D;
+using System.Web.Script.Serialization;
 
 namespace ConsumedByCode.SignatureToImage
 {
@@ -56,7 +56,8 @@ namespace ConsumedByCode.SignatureToImage
                 signatureGraphic.Clear(Background);
                 signatureGraphic.SmoothingMode = SmoothingMode.AntiAlias;
                 Pen pen = new Pen(PenColor, PenWidth);
-                List<SignatureLine> lines = (List<SignatureLine>)JsonConvert.DeserializeObject(json ?? string.Empty, typeof(List<SignatureLine>));
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                List<SignatureLine> lines = serializer.Deserialize<List<SignatureLine>>(json ?? string.Empty);
                 foreach (SignatureLine line in lines)
                 {
                     signatureGraphic.DrawLine(pen, line.lx, line.ly, line.mx, line.my);
