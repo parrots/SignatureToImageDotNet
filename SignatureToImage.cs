@@ -1,109 +1,147 @@
 /*
  * Author:      Curtis Herbert (me@forgottenexpanse.com)
- * License:     BSD License 
- * Version: 	1.1 (2011-10-03)
+ * License:     BSD License
+ * Version:     2.0 (2012-02-11)
+ * Contributor: Justin Stolle (justin@justinstolle.com)
  */
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Drawing;
-using System.Drawing.Text;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
+using System.IO;
+using System.Linq;
 using System.Web.Script.Serialization;
 
 namespace ConsumedByCode.SignatureToImage
 {
     /// <summary>
-    /// A server-side supplement to Signature Pad (http://thomasjbradley.ca/lab/signature-to-image) used to create an image 
-    /// of the user's signature based on either the name they entered or the hand-drawn signature they provided.
+    /// A supplemental class for Signature Pad (https://github.com/thomasjbradley/signature-pad)
+    /// that generates an image of the signature's JSON output server-side using C#. Alternately,
+    /// you can provide a name and generate an image that resembles a signature from a font.
+    /// Similar to Signature to Image PHP (https://github.com/thomasjbradley/signature-to-image)
     /// </summary>
     public class SignatureToImage
     {
+        public Color BackgroundColor { get; set; }
         public Color PenColor { get; set; }
-        public Color Background { get; set; }
-        public int Height { get; set; }
-        public int Width { get; set; }
-        public int PenWidth { get; set; }
-        public int FontSize { get; set; }
-
-        private const string FONT_FAMILY = "Journal";
+        public int CanvasWidth { get; set; }
+        public int CanvasHeight { get; set; }
+        public float PenWidth { get; set; }
+        public float FontSize { get; set; }
+        public string FontName { get; set; }
 
         /// <summary>
-        /// Gets a new signature gernator with the default options.
+        /// Gets a new signature generator with the default options.
         /// </summary>
         public SignatureToImage()
         {
-            PenColor = Color.Black;
-            Background = Color.White;
-            Height = 55;
-            Width = 198;
+            // Default values
+            BackgroundColor = Color.White;
+            PenColor = Color.FromArgb(20, 83, 148);
+            CanvasWidth = 198;
+            CanvasHeight = 45;
             PenWidth = 2;
             FontSize = 24;
+            FontName = "Journal";
         }
 
         /// <summary>
         /// Draws a signature based on the JSON provided by Signature Pad.
         /// </summary>
         /// <param name="json">JSON string of line drawing commands.</param>
-        /// <returns>Bitmap image containing the user's signature.</returns>
+        /// <returns>Bitmap image containing the signature.</returns>
         public Bitmap SigJsonToImage(string json)
         {
-            Bitmap signatureImage = new Bitmap(Width, Height);
-            signatureImage.MakeTransparent();
-            using (Graphics signatureGraphic = Graphics.FromImage(signatureImage))
+            var signatureImage = GetBlankCanvas();
+            if (!string.IsNullOrWhiteSpace(json))
             {
-                signatureGraphic.Clear(Background);
-                signatureGraphic.SmoothingMode = SmoothingMode.AntiAlias;
-                Pen pen = new Pen(PenColor, PenWidth);
-                JavaScriptSerializer serializer = new JavaScriptSerializer();
-                List<SignatureLine> lines = serializer.Deserialize<List<SignatureLine>>(json ?? string.Empty);
-                foreach (SignatureLine line in lines)
+                using (var signatureGraphic = Graphics.FromImage(signatureImage))
                 {
-                    signatureGraphic.DrawLine(pen, line.lx, line.ly, line.mx, line.my);
+                    signatureGraphic.SmoothingMode = SmoothingMode.AntiAlias;
+                    var pen = new Pen(PenColor, PenWidth);
+                    var serializer = new JavaScriptSerializer();
+                    // Next line may throw System.ArgumentException if the string
+                    // is an invalid json primitive for the SignatureLine structure
+                    var lines = serializer.Deserialize<List<SignatureLine>>(json);
+                    foreach (var line in lines)
+                    {
+                        signatureGraphic.DrawLine(pen, line.lx, line.ly, line.mx, line.my);
+                    }
                 }
             }
             return signatureImage;
         }
 
         /// <summary>
-        /// Draws a signature using the journal font.
+        /// Draws an approximation of a signature using a font.
         /// </summary>
-        /// <param name="name">User's name to create a signature for.</param>
-        /// <param name="fontPath">Full path of journal.ttf. Should be passed if system doesn't have the font installed.</param>
+        /// <param name="name">The string that will be drawn.</param>
+        /// <param name="fontPath">Full path of font file to be used if default font is not installed on the system.</param>
         /// <returns>Bitmap image containing the user's signature.</returns>
         public Bitmap SigNameToImage(string name, string fontPath = null)
         {
-            //we need a reference to the font, be it the .tff in the site project or the version installed on the host
-            if (string.IsNullOrEmpty(fontPath) && !FontFamily.Families.Any(f => f.Name.Equals(FONT_FAMILY)))
+            var signatureImage = GetBlankCanvas();
+            if (!string.IsNullOrWhiteSpace(name))
             {
-                throw new ArgumentException("FontPath must point to the copy of journal.ttf when the system does not have the font installed", "fontPath");                
-            }
-
-            Bitmap signatureImage = new Bitmap(Width, Height);
-            signatureImage.MakeTransparent();
-            using (Graphics signatureGraphic = Graphics.FromImage(signatureImage))
-            {
-                signatureGraphic.Clear(Background);
-
                 Font font;
-                if (!string.IsNullOrEmpty(fontPath))
+                // Need a reference to the font, be it the .ttf in the project or the system-installed font
+                if (string.IsNullOrWhiteSpace(fontPath))
                 {
-                    //to make sure the host doesn't need the font installed, use a private font collection
-                    PrivateFontCollection collection = new PrivateFontCollection();
-                    collection.AddFontFile(fontPath);
-                    font = new Font(collection.Families.First(), FontSize);
+                    // Path parameter not provided, try to use system-installed font
+                    var installedFontCollection = new InstalledFontCollection();
+                    if (installedFontCollection.Families.Any(f => f.Name == FontName))
+                    {
+                        font = new Font(FontName, FontSize);
+                    }
+                    else
+                    {
+                        throw new ArgumentException("The full path of the font file must be provided when the specified font is not installed on the system.", "fontPath");
+                    }
+                }
+                else if (File.Exists(fontPath))
+                {
+                    try
+                    {
+                        // Temporarily install font while not affecting the system-installed collection
+                        var collection = new PrivateFontCollection();
+                        collection.AddFontFile(fontPath);
+                        font = new Font(collection.Families.First(), FontSize);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        // Since the existence of the file has already been tested, this exception
+                        // means the file is invalid or not supported when trying to load
+                        throw new Exception("The specified font file \"" + fontPath + "\" is either invalid or not supported.");
+                    }
                 }
                 else
                 {
-                    //fall back to the version installed on the host
-                    font = new Font(FONT_FAMILY, FontSize);
+                    throw new FileNotFoundException("The specified font file \"" + fontPath + "\" does not exist or permission was denied.", fontPath);
                 }
-                
-                signatureGraphic.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-                signatureGraphic.DrawString(name ?? string.Empty, font, new SolidBrush(PenColor), new PointF(0, 0));
+                using (var signatureGraphic = Graphics.FromImage(signatureImage))
+                {
+                    signatureGraphic.TextRenderingHint = TextRenderingHint.AntiAlias;
+                    signatureGraphic.DrawString(name, font, new SolidBrush(PenColor), 0, 0);
+                }
             }
             return signatureImage;
+        }
+
+        /// <summary>
+        /// Get a blank bitmap using instance properties for dimensions and background color.
+        /// </summary>
+        /// <returns>Blank bitmap image.</returns>
+        private Bitmap GetBlankCanvas()
+        {
+            var blankImage = new Bitmap(CanvasWidth, CanvasHeight);
+            blankImage.MakeTransparent();
+            using (var signatureGraphic = Graphics.FromImage(blankImage))
+            {
+                signatureGraphic.Clear(BackgroundColor);
+            }
+            return blankImage;
         }
 
         /// <summary>
