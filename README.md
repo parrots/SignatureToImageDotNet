@@ -1,7 +1,7 @@
 #Signature to Image .Net
 **License:** BSD License
-**Version:** 1.0 (2011-03-31)
-**Requirements:** .NET 4.0, [Json.NET](http://json.codeplex.com/)
+**Version:** 1.1 (2011-10-03)
+**Requirements:** .NET 4.0
 
 A server-side supplement to Signature Pad (http://thomasjbradley.ca/lab/signature-to-image) used to create an image of the user's signature based on either the name they entered or the hand-drawn signature they provided.
 

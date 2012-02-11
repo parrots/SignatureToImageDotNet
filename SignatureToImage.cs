@@ -1,7 +1,7 @@
 /*
  * Author:      Curtis Herbert (me@forgottenexpanse.com)
  * License:     BSD License 
- * Version: 	1.0 (2011-03-31)
+ * Version: 	1.1 (2011-10-03)
  */
 
 using System;
