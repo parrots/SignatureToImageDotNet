@@ -53,9 +53,9 @@ namespace ConsumedByCode.SignatureToImage
         /// <param name="json">JSON string of line drawing commands.</param>
         /// <returns>Bitmap image containing the signature.</returns>
         public Bitmap SigJsonToImage(string json)
-	{
-	    return SigJsonToImage(json, new Size(CanvasWidth, CanvasHeight));
-	}
+	    {
+	        return SigJsonToImage(json, new Size(CanvasWidth, CanvasHeight));
+	    }
 	        
 	        
         public Bitmap SigJsonToImage(string json, Size size)
@@ -155,29 +155,29 @@ namespace ConsumedByCode.SignatureToImage
 	/// </summary>
         /// <returns>Resized image.</returns>
         private Image ResizeImage(Image img, Size size)
-	{
-	    int srcWidth = img.Width;
-	    int srcHeight = img.Height;
+	    {
+	        int srcWidth = img.Width;
+	        int srcHeight = img.Height;
 
-	    float percent = 0;
-	    float percWidth = 0;
-	    float percHeight = 0;
+	        float percent = 0;
+	        float percWidth = 0;
+	        float percHeight = 0;
 
-	    percWidth = ((float)size.Width / (float)srcWidth);
-	    percHeight = ((float)size.Height / (float)srcHeight);
-	    percent = (percHeight < percWidth) ? percHeight : percWidth;
+	        percWidth = ((float)size.Width / (float)srcWidth);
+	        percHeight = ((float)size.Height / (float)srcHeight);
+	        percent = (percHeight < percWidth) ? percHeight : percWidth;
 
-	    int destWidth = (int)(srcWidth * percent);
-	    int destHeight = (int)(srcHeight * percent);
+	        int destWidth = (int)(srcWidth * percent);
+	        int destHeight = (int)(srcHeight * percent);
 
-	    Bitmap bmp = new Bitmap(destWidth, destHeight);
+	        Bitmap bmp = new Bitmap(destWidth, destHeight);
 
-	    Graphics graphic = Graphics.FromImage((Image)bmp);
-	    graphic.InterpolationMode = InterpolationMode.HighQualityBicubic;
-	    graphic.DrawImage(img, 0, 0, destWidth, destHeight);
-	    graphic.Dispose();
+	        Graphics graphic = Graphics.FromImage((Image)bmp);
+	        graphic.InterpolationMode = InterpolationMode.HighQualityBicubic;
+	        graphic.DrawImage(img, 0, 0, destWidth, destHeight);
+	        graphic.Dispose();
 
-	    return (Image)bmp;
+	        return (Image)bmp;
         }
 
         /// <summary>
