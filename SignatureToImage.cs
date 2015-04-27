@@ -53,6 +53,12 @@ namespace ConsumedByCode.SignatureToImage
         /// <param name="json">JSON string of line drawing commands.</param>
         /// <returns>Bitmap image containing the signature.</returns>
         public Bitmap SigJsonToImage(string json)
+	{
+	    return SigJsonToImage(json, new Size(CanvasWidth, CanvasHeight));
+	}
+	        
+	        
+        public Bitmap SigJsonToImage(string json, Size size)
         {
             var signatureImage = GetBlankCanvas();
             if (!string.IsNullOrWhiteSpace(json))
@@ -71,7 +77,7 @@ namespace ConsumedByCode.SignatureToImage
                     }
                 }
             }
-            return signatureImage;
+            return (Bitmap)((size.Width == CanvasWidth && size.Height == CanvasHeight) ? signatureImage : ResizeImage(signatureImage, size));
         }
 
         /// <summary>
@@ -142,6 +148,36 @@ namespace ConsumedByCode.SignatureToImage
                 signatureGraphic.Clear(BackgroundColor);
             }
             return blankImage;
+        }
+        
+        /// <summary>
+	/// Resizes the image to fit the canvas in the event that the signature was drawn larger than it will be redisplayed.
+	/// </summary>
+        /// <returns>Resized image.</returns>
+        private Image ResizeImage(Image img, Size size)
+	{
+	    int srcWidth = img.Width;
+	    int srcHeight = img.Height;
+
+	    float percent = 0;
+	    float percWidth = 0;
+	    float percHeight = 0;
+
+	    percWidth = ((float)size.Width / (float)srcWidth);
+	    percHeight = ((float)size.Height / (float)srcHeight);
+	    percent = (percHeight < percWidth) ? percHeight : percWidth;
+
+	    int destWidth = (int)(srcWidth * percent);
+	    int destHeight = (int)(srcHeight * percent);
+
+	    Bitmap bmp = new Bitmap(destWidth, destHeight);
+
+	    Graphics graphic = Graphics.FromImage((Image)bmp);
+	    graphic.InterpolationMode = InterpolationMode.HighQualityBicubic;
+	    graphic.DrawImage(img, 0, 0, destWidth, destHeight);
+	    graphic.Dispose();
+
+	    return (Image)bmp;
         }
 
         /// <summary>
