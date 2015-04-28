@@ -56,8 +56,13 @@ namespace ConsumedByCode.SignatureToImage
 	    {
 	        return SigJsonToImage(json, new Size(CanvasWidth, CanvasHeight));
 	    }
-	        
-	        
+
+        /// <summary>
+        /// Draws a signature based on the JSON provided by Signature Pad.
+        /// </summary>
+        /// <param name="json">JSON string of line drawing commands.</param>
+        /// <param name="size">System.Drawing.Size structure containing Width and Height dimensions.</param>
+        /// <returns>Bitmap image containing the signature.</returns>
         public Bitmap SigJsonToImage(string json, Size size)
         {
             var signatureImage = GetBlankCanvas();
@@ -87,6 +92,18 @@ namespace ConsumedByCode.SignatureToImage
         /// <param name="fontPath">Full path of font file to be used if default font is not installed on the system.</param>
         /// <returns>Bitmap image containing the user's signature.</returns>
         public Bitmap SigNameToImage(string name, string fontPath = null)
+        {
+            return SigNameToImage(name, null, fontPath);
+        }
+
+        /// <summary>
+        /// Draws an approximation of a signature using a font.
+        /// </summary>
+        /// <param name="name">The string that will be drawn.</param>
+        /// <param name="size">System.Drawing.Size structure containing Width and Height dimensions.</param>
+        /// <param name="fontPath">Full path of font file to be used if default font is not installed on the system.</param>
+        /// <returns>Bitmap image containing the user's signature.</returns>
+        public Bitmap SigNameToImage(string name, Size size, string fontPath = null)
         {
             var signatureImage = GetBlankCanvas();
             if (!string.IsNullOrWhiteSpace(name))
@@ -132,7 +149,7 @@ namespace ConsumedByCode.SignatureToImage
                     signatureGraphic.DrawString(name, font, new SolidBrush(PenColor), 0, 0);
                 }
             }
-            return signatureImage;
+            return (Bitmap)((size.Width == CanvasWidth && size.Height == CanvasHeight) ? signatureImage : ResizeImage(signatureImage, size));
         }
 
         /// <summary>
@@ -151,8 +168,10 @@ namespace ConsumedByCode.SignatureToImage
         }
         
         /// <summary>
-	/// Resizes the image to fit the canvas in the event that the signature was drawn larger than it will be redisplayed.
-	/// </summary>
+        /// Resizes the image to fit the canvas in the event that the signature was drawn larger than it will be redisplayed.
+        /// </summary>
+        /// <param name="img">The image that will be resized.</param>
+        /// <param name="size">System.Drawing.Size structure containing the new Width and Height dimensions.</param>
         /// <returns>Resized image.</returns>
         private Image ResizeImage(Image img, Size size)
 	    {
